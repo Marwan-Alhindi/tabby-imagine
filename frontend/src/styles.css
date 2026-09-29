@@ -158,3 +158,14 @@ summary { cursor: pointer; color: var(--mint-ink); font-weight: 600; padding: 4p
 [dir="rtl"] .bubble.assistant,
 [dir="rtl"] .tool-chip { align-self: flex-end; }
 [dir="rtl"] .badge { left: auto; right: 8px; }
+
+/* History sheet */
+.chat { position: relative; }
+.sheet-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.25); display: flex; align-items: flex-end; z-index: 5; }
+.sheet { width: 100%; max-height: 78%; overflow-y: auto; background: var(--bg); border-radius: 28px 28px 0 0; padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 10px; animation: up 0.2s ease-out; }
+@keyframes up { from { transform: translateY(30px); opacity: 0; } }
+.sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sheet-head .chip-btn { margin: 0; }
+.session-item .row { font-size: 13px; }
+.resumed { border: 1px dashed var(--mint-ink); }
+.chat-header .lang-toggle { display: grid; place-items: center; color: var(--ink); }

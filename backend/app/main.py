@@ -152,6 +152,15 @@ async def session():
     return {"language": account["language"], "session": s}
 
 
+@app.get("/api/sessions")
+async def sessions():
+    """Recent sessions for the history sheet: memos only, never transcripts."""
+    rows = await asyncio.to_thread(db.list_sessions, SESSION_TTL_DAYS)
+    for s in rows:
+        s["pending"] = [{"id": i.id, **i.value} for i in (await app.state.graph.aget_state(_config(s["thread_id"]))).interrupts]
+    return rows
+
+
 @app.post("/api/language")
 def set_language(req: LanguageRequest):
     db.update_account({"language": req.language})

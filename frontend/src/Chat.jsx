@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import { getJSON, postJSON, resumeAction, sendMessage } from "./api.js";
 import { ConfirmCard, UICard } from "./Cards.jsx";
-import { SUGGESTIONS, sar, t } from "./i18n.js";
+import { SUGGESTIONS, lang, sar, t } from "./i18n.js";
 
 const TOOL_LABELS = {
   search_products: "Searching products",
@@ -40,15 +40,28 @@ function LanguagePicker({ onPick }) {
   );
 }
 
+// "Mobiles · Apple, Samsung · 256GB+ · up to 11,111 SAR" instead of raw filter values.
+function formatSearch(s) {
+  if (!s) return null;
+  const parts = [
+    s.query && `“${s.query}”`,
+    s.category && t(`cat:${s.category}`),
+    s.brands?.join(", "),
+    s.min_storage_gb && `${s.min_storage_gb}GB+`,
+    s.color,
+    s.store,
+    s.min_price && `${t("from")} ${sar(s.min_price)}`,
+    s.max_price && `${t("up to")} ${sar(s.max_price)}`,
+    s.deals_only && t("Deals"),
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : null;
+}
+
 // Built only from the session memo: what the user did, not what was said.
-function WelcomeBack({ session, onContinue, onNew }) {
-  const m = session.memo;
-  const search = m.last_search && Object.entries(m.last_search)
-    .map(([, v]) => (Array.isArray(v) ? v.join(", ") : v)).join(" · ");
+function SessionSummary({ memo: m }) {
+  const search = formatSearch(m.last_search);
   return (
-    <div className="card welcome">
-      <div className="card-title">{t("Welcome back")} 👋</div>
-      <div className="muted">{t("Here's where you left off:")}</div>
+    <>
       {m.viewed_plans?.map((p) => (
         <div key={p.product_id} className="row"><span>{t("Viewed plans for")}</span><b>{p.name} · {sar(p.price)}</b></div>
       ))}
@@ -61,9 +74,51 @@ function WelcomeBack({ session, onContinue, onNew }) {
       {search && <div className="row"><span>{t("Last search")}</span><b dir="auto">{search}</b></div>}
       {m.ticket && <div className="row"><span>{t("Support ticket")}</span><b>{m.ticket}</b></div>}
       {m.topics && <div className="row"><span>{t("Also discussed")}</span><b>{m.topics.map(t).join(", ")}</b></div>}
+    </>
+  );
+}
+
+function WelcomeBack({ session, onContinue, onNew }) {
+  return (
+    <div className="card welcome">
+      <div className="card-title">{t("Welcome back")} 👋</div>
+      <div className="muted">{t("Here's where you left off:")}</div>
+      <SessionSummary memo={session.memo} />
       <div className="confirm-actions">
         <button className="btn-secondary" onClick={onNew}>{t("Start new")}</button>
-        <button className="btn-primary" onClick={onContinue}>{t("Continue")}</button>
+        <button className="btn-primary" onClick={() => onContinue(session)}>{t("Continue")}</button>
+      </div>
+    </div>
+  );
+}
+
+const when = (iso) => new Date(iso).toLocaleString(lang() === "ar" ? "ar-SA" : "en-US",
+  { weekday: "short", hour: "numeric", minute: "2-digit" });
+
+function HistorySheet({ current, onPick, onNew, onClose }) {
+  const [sessions, setSessions] = useState(null);
+  useEffect(() => { getJSON("/api/sessions").then(setSessions); }, []);
+  return (
+    <div className="sheet-backdrop" onClick={onClose}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-head">
+          <div className="card-title">{t("Recent")}</div>
+          <button className="chip-btn" onClick={onNew}>+ {t("Start new")}</button>
+        </div>
+        <p className="muted small">{t("Summaries of your last 7 days. Conversations themselves aren't shown.")}</p>
+        {sessions === null && <div className="typing"><i /><i /><i /></div>}
+        {sessions?.length === 0 && <div className="muted">{t("No recent sessions")}</div>}
+        {sessions?.map((s) => (
+          <div key={s.thread_id} className="card session-item">
+            <div className="sheet-head">
+              <span className="muted">{when(s.updated_at)}</span>
+              {s.thread_id === current
+                ? <span className="filter-tag">{t("Current")}</span>
+                : <button className="chip-btn" onClick={() => onPick(s)}>{t("Continue")}</button>}
+            </div>
+            <SessionSummary memo={s.memo} />
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -76,6 +131,7 @@ export default function Chat({ language, onLanguage, screen, onNavigate }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const endRef = useRef(null);
 
   useEffect(() => {
@@ -94,19 +150,23 @@ export default function Chat({ language, onLanguage, screen, onNavigate }) {
     setPhase("chat");
   };
 
-  const continueSession = () => {
-    setThreadId(session.thread_id);
-    // A purchase left waiting for confirmation comes back as a live confirm card.
-    if (session.pending?.length) {
-      setMessages([{ role: "assistant", parts: session.pending.map((data) => ({ kind: "confirm", data, state: "pending" })) }]);
-    }
+  // Resume a past session: show its summary (not its transcript) and any purchase
+  // still waiting for confirmation as a live confirm card.
+  const continueSession = (s) => {
+    setThreadId(s.thread_id);
+    setMessages([{ role: "assistant", parts: [
+      { kind: "resumed", memo: s.memo },
+      ...(s.pending || []).map((data) => ({ kind: "confirm", data, state: "pending" })),
+    ] }]);
     setSession(null);
+    setShowHistory(false);
   };
 
   const startNew = () => {
     setThreadId(newThread());
     setMessages([]);
     setSession(null);
+    setShowHistory(false);
   };
 
   // Apply one streamed event to the last (assistant) message.
@@ -147,7 +207,7 @@ export default function Chat({ language, onLanguage, screen, onNavigate }) {
   const send = (text) => {
     if (!text.trim() || busy) return;
     const tid = session ? session.thread_id : threadId; // typing on the welcome card continues it
-    if (session) continueSession();
+    if (session) continueSession(session);
     setInput("");
     setMessages((m) => [
       // Typing instead of answering a confirm card cancels it (the backend does the same).
@@ -189,6 +249,11 @@ export default function Chat({ language, onLanguage, screen, onNavigate }) {
           <div className="chat-title">{t("Tabby Assistant")}</div>
           <div className="muted">{t("Search, compare, pay. Just ask.")}</div>
         </div>
+        <button className="lang-toggle" onClick={() => setShowHistory(true)} aria-label={t("Recent")}>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2" />
+          </svg>
+        </button>
         <button className="lang-toggle" onClick={toggleLanguage} aria-label="Switch language">
           {language === "ar" ? "EN" : "ع"}
         </button>
@@ -216,6 +281,12 @@ export default function Chat({ language, onLanguage, screen, onNavigate }) {
             <div key={mi} className="assistant-turn">
               {m.parts.map((p, pi) => {
                 if (p.kind === "text") return <div key={pi} className="bubble assistant" dir="auto"><Markdown>{p.text}</Markdown></div>;
+                if (p.kind === "resumed") return (
+                  <div key={pi} className="card resumed">
+                    <div className="card-sub">{t("Continuing where you left off")}</div>
+                    <SessionSummary memo={p.memo} />
+                  </div>
+                );
                 if (p.kind === "tool") return <div key={pi} className="tool-chip">{t(TOOL_LABELS[p.name] || p.name)}…</div>;
                 if (p.kind === "ui") return <UICard key={pi} ui={p.ui} onAsk={send} />;
                 if (p.kind === "confirm") return <ConfirmCard key={pi} part={p} onDecide={(ok) => decide(mi, pi, ok)} />;
@@ -227,6 +298,10 @@ export default function Chat({ language, onLanguage, screen, onNavigate }) {
         )}
         <div ref={endRef} />
       </div>
+
+      {showHistory && (
+        <HistorySheet current={threadId} onPick={continueSession} onNew={startNew} onClose={() => setShowHistory(false)} />
+      )}
 
       <form className="composer" onSubmit={(e) => { e.preventDefault(); send(input); }}>
         <div className="composer-box">

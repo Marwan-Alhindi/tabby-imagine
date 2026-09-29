@@ -4,7 +4,11 @@ let current = "en";
 
 export const setLanguage = (l) => { current = l; };
 export const lang = () => current;
-export const t = (s) => (current === "ar" && AR[s]) || s;
+const EN = {
+  "cat:mobiles": "Mobiles", "cat:electronics": "Electronics", "cat:travel": "Travel", "cat:spa_salon": "Spa & Salon",
+  "cat:fashion": "Fashion", "cat:beauty": "Beauty",
+};
+export const t = (s) => (current === "ar" ? AR[s] : EN[s]) || s;
 export const sar = (n) =>
   `${Number(n).toLocaleString(current === "ar" ? "ar-SA" : "en-US", { maximumFractionDigits: 2 })} ${t("SAR")}`;
 
@@ -91,5 +95,10 @@ const AR = {
   "The card has expired.": "البطاقة منتهية الصلاحية.",
   "The bank reported insufficient balance.": "البنك أفاد بعدم كفاية الرصيد.",
   "OTP / 3-D Secure verification failed or timed out.": "فشل التحقق برمز OTP أو انتهى وقته.",
+  Recent: "الأخيرة", Current: "الحالية", Deals: "عروض", "No recent sessions": "ما فيه محادثات حديثة",
+  "Continuing where you left off": "نكمل من حيث وقفت",
+  "Summaries of your last 7 days. Conversations themselves aren't shown.": "ملخصات آخر 7 أيام، بدون نص المحادثات.",
+  "cat:mobiles": "جوالات", "cat:electronics": "إلكترونيات", "cat:travel": "سفر", "cat:spa_salon": "سبا وصالون",
+  "cat:fashion": "أزياء", "cat:beauty": "تجميل",
   Home: "الرئيسية", Shop: "تسوق", Payments: "المدفوعات", Profile: "حسابي",
 };

@@ -116,3 +116,10 @@ def upsert_session(thread_id: str, language: str, memo: dict) -> None:
         "thread_id": thread_id, "account_id": ACCOUNT_ID, "language": language, "memo": memo,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }).execute()
+
+
+def list_sessions(max_age_days: int, limit: int = 10) -> list[dict]:
+    since = (datetime.now(timezone.utc) - timedelta(days=max_age_days)).isoformat()
+    rows = (sb().table("chat_sessions").select("*").eq("account_id", ACCOUNT_ID).gte("updated_at", since)
+            .order("updated_at", desc=True).limit(limit).execute().data)
+    return [r for r in rows if r["memo"].get("turns")]
