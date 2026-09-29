@@ -1,0 +1,21 @@
+frontend/src/Chat.jsx
+  s_bd9004f1bdd92c::t_daca5f7128263c 232-237
+frontend/src/styles.css
+  s_bd9004f1bdd92c::t_2d1d89f4ebdf89 74-79,156-159
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "7db15673681443468c8765f795f8c7c8731e6fc3",
+  "prompts": {},
+  "sessions": {
+    "s_bd9004f1bdd92c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1bad4d66-51a0-40c1-81a4-cb972aa94313",
+        "model": "unknown"
+      },
+      "human_author": "Marwan-Alhindi <mfhmarwin@gmail.com>"
+    }
+  }
+}
