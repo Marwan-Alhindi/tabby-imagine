@@ -1,0 +1,44 @@
+backend/db/schema.sql
+  s_bd9004f1bdd92c::t_0d7090e3c3be8b 1-124
+  s_bd9004f1bdd92c::t_b266f5e73da57e 125-126
+README.md
+  s_bd9004f1bdd92c::t_2f110ef0c38d06 18-23
+backend/.env.example
+  s_bd9004f1bdd92c::t_41afeba9ae3c92 1-7
+backend/app/agent.py
+  s_bd9004f1bdd92c::t_084b76cfd22202 12-14,22-23,25-28,33,40,45,59,62,69,72-73
+backend/app/db.py
+  s_bd9004f1bdd92c::t_a8049990671499 1-74
+backend/app/main.py
+  s_bd9004f1bdd92c::t_b53ff3246b5d32 26,28,103,105-107,117
+backend/app/seed_data.py
+  s_bd9004f1bdd92c::t_c353f104fe7c42 1,3-4,81
+backend/app/tools.py
+  s_bd9004f1bdd92c::t_d2c88ff20e7748 15,24,38-43,45-46,51,60,63-64,77-78,81,84-85,87-89,91,107,114,116-117,123,125-126,132,140,151,175,198,215,221,225,236-237,240-241,249-263,274-275
+backend/db/seed.py
+  s_bd9004f1bdd92c::t_dadb36a179fd86 1-44
+backend/langgraph.json
+  s_bd9004f1bdd92c::t_7c89539995552b 1-5
+backend/pyproject.toml
+  s_bd9004f1bdd92c::t_5d2793b882b937 11,15,18-22
+backend/studio.py
+  s_bd9004f1bdd92c::t_b5c6ee7d9afba1 1-3
+backend/uv.lock
+  s_bd9004f1bdd92c::t_b0e49d9228af8c 54-65,75-159,300-382,417-531,541-562,640-644,671-679,805-835,914-959,973-994,1008-1025,1067-1306,1407-1643,1734-1759,1815-1828,1856-1873,1909-1987,1998,2002,2006-2010,2018,2022,2026-2028,2068-2076,2248-2274,2423-2538
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "30b5c4f453d021c3c18368547b39cacf2ee4b3d1",
+  "prompts": {},
+  "sessions": {
+    "s_bd9004f1bdd92c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1bad4d66-51a0-40c1-81a4-cb972aa94313",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marwan-Alhindi <mfhmarwin@gmail.com>"
+    }
+  }
+}
