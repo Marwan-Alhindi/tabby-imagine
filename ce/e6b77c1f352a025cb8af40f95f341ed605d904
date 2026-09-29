@@ -1,0 +1,19 @@
+backend/app/agent.py
+  s_bd9004f1bdd92c::t_072f891941d6d4 39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "cee6b77c1f352a025cb8af40f95f341ed605d904",
+  "prompts": {},
+  "sessions": {
+    "s_bd9004f1bdd92c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1bad4d66-51a0-40c1-81a4-cb972aa94313",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marwan-Alhindi <mfhmarwin@gmail.com>"
+    }
+  }
+}
