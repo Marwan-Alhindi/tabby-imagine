@@ -1,0 +1,31 @@
+.dockerignore
+  s_bd9004f1bdd92c::t_6e1d83950b1052 1-6
+Dockerfile
+  s_bd9004f1bdd92c::t_e9c681a9f77304 1-19
+backend/app/agent.py
+  s_bd9004f1bdd92c::t_4c44e086468d6b 89,118-119
+backend/app/db.py
+  s_bd9004f1bdd92c::t_eb9ffaf8f9f414 4-5,12-56,94,98,104,109,115,126,131-132,136,148,155,162,169
+backend/app/main.py
+  s_bd9004f1bdd92c::t_c25baba58752ea 19-21,29-30,45,66-88,126-127,152-154,164,168,170,174,187,196,220,225,232-236
+frontend/src/api.js
+  s_bd9004f1bdd92c::t_f8302fe77f107c 1-13,18,21-24,52,55
+render.yaml
+  s_bd9004f1bdd92c::t_a077f247e65aaf 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "00e5ac2eedef29d809ca62fd540e2945856c616f",
+  "prompts": {},
+  "sessions": {
+    "s_bd9004f1bdd92c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1bad4d66-51a0-40c1-81a4-cb972aa94313",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marwan-Alhindi <mfhmarwin@gmail.com>"
+    }
+  }
+}
