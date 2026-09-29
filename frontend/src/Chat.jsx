@@ -229,8 +229,12 @@ export default function Chat({ language, onLanguage, screen, onNavigate }) {
       </div>
 
       <form className="composer" onSubmit={(e) => { e.preventDefault(); send(input); }}>
-        <input dir="auto" value={input} onChange={(e) => setInput(e.target.value)} placeholder={t("Ask Tabby anything…")} />
-        <button type="submit" disabled={busy || !input.trim()} aria-label="Send">↑</button>
+        <div className="composer-box">
+          <input dir="auto" value={input} onChange={(e) => setInput(e.target.value)} placeholder={t("Ask Tabby anything…")} />
+          <button type="submit" disabled={busy || !input.trim()} aria-label="Send">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
+          </button>
+        </div>
       </form>
     </div>
   );
