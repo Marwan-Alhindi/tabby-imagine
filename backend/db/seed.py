@@ -46,8 +46,7 @@ def main():
                values (%(id)s, %(account_id)s, %(method_id)s, %(installment_id)s, %(amount)s, %(status)s, %(failure_code)s,
                        now() - make_interval(days => %(days_ago)s))""",
             [{**a, "account_id": ACCOUNT_ID} for a in d.PAYMENT_ATTEMPTS])
-        cur.executemany("insert into help_articles (id, topic, title, body) values (%s, %s, %s, %s)", d.HELP_ARTICLES)
-    print(f"Seeded {len(d.PRODUCTS)} products, {len(d.STORES)} stores, {len(d.ORDERS)} orders, {len(d.HELP_ARTICLES)} help articles.")
+    print(f"Seeded {len(d.PRODUCTS)} products, {len(d.STORES)} stores, {len(d.ORDERS)} orders.")
 
 
 if __name__ == "__main__":

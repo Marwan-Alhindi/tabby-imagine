@@ -166,8 +166,9 @@ function Help({ ui }) {
       <div className="card-sub">{t("From the help center")}</div>
       {ui.articles.map((a) => (
         <details key={a.id} className="article">
-          <summary>{a.title}</summary>
-          <p>{a.body}</p>
+          <summary dir="auto">{a.title}</summary>
+          <p dir="auto">{a.body}</p>
+          {a.url && <a className="source-link" href={a.url} target="_blank" rel="noreferrer">tabby.sa ↗</a>}
         </details>
       ))}
     </div>

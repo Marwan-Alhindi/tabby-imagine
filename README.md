@@ -29,3 +29,15 @@ Opens https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:2024 (uses `L
 
 ## Deploy (Render)
 One Docker image (`Dockerfile`) builds the React app and serves it with the API. `render.yaml` defines the service; set the secret env vars in Render. Each browser gets its own copy of the seeded demo account, and chat is rate-limited per visitor. Reset demo data with `cd backend && uv run python -m db.seed`.
+
+## Help-center RAG
+- Source: 300 articles (Arabic + English, consumer + business) scraped from tabby.sa's help centers and FAQ pages into `backend/app/kb/tabby_help.json`.
+- Indexing: `uv run python -m db.ingest_kb`. `RecursiveCharacterTextSplitter` (Arabic-aware separators, title header on every chunk) → OpenAI `text-embedding-3-small` → Supabase pgvector (`kb_chunks`, HNSW). LangChain `index()` + `SQLRecordManager` makes it incremental: unchanged chunks are skipped, changed ones re-embedded, removed ones deleted.
+- Retrieval (`app/rag.py`): hybrid search in SQL (full-text + vector, RRF) per query, then RAG-Fusion across the variants the agent writes (question + its translation), fused again with RRF. Traced in LangSmith.
+- Eval: `uv run python -m evals.rag_eval` (20 English and Saudi-dialect questions):
+
+| setup | hit@1 | hit@5 | MRR |
+|---|---|---|---|
+| vector only | 60% | 95% | 0.75 |
+| hybrid (single query) | 65% | 80% | 0.72 |
+| hybrid + bilingual fusion (used) | 70% | 100% | 0.81 |

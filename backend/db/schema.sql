@@ -2,7 +2,7 @@
 
 drop view if exists product_cards;
 drop function if exists search_products;
-drop function if exists search_help;
+drop function if exists search_help;  -- replaced by kb_hybrid_search (kb_schema.sql)
 drop table if exists chat_sessions, support_tickets, help_articles, payment_attempts, payment_methods, installments, orders, products, stores, categories, accounts cascade;
 
 create table categories (
@@ -87,16 +87,6 @@ create table payment_attempts (
   created_at     timestamptz not null default now()
 );
 
--- Help-center articles the assistant searches before answering policy questions.
-create table help_articles (
-  id     text primary key,
-  topic  text not null,
-  title  text not null,
-  body   text not null,
-  search tsvector generated always as (to_tsvector('english', title || ' ' || topic || ' ' || body)) stored
-);
-create index on help_articles using gin (search);
-
 create table support_tickets (
   id         text primary key,
   account_id text not null references accounts(id),
@@ -118,18 +108,6 @@ create table chat_sessions (
   updated_at timestamptz not null default now()
 );
 create index on chat_sessions (account_id, updated_at desc);
-
--- Full-text search over the help center: any query word may match, best match first.
-create function search_help(p_query text, p_limit int default 3) returns setof help_articles
-language sql stable as $$
-  with q as (
-    select to_tsquery('english', array_to_string(tsvector_to_array(to_tsvector('english', p_query)), ' | ')) as tq
-  )
-  select h.* from help_articles h, q
-  where h.search @@ q.tq
-  order by ts_rank(h.search, q.tq) desc
-  limit p_limit;
-$$;
 
 -- Products joined with their store: what the app and the assistant display.
 create view product_cards with (security_invoker = true) as
@@ -193,7 +171,6 @@ alter table orders       enable row level security;
 alter table installments enable row level security;
 alter table payment_methods  enable row level security;
 alter table payment_attempts enable row level security;
-alter table help_articles    enable row level security;
 alter table support_tickets  enable row level security;
 alter table chat_sessions    enable row level security;
 

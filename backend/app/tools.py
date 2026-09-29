@@ -12,6 +12,7 @@ a rich `ui` event to the frontend through LangGraph's custom stream.
 """
 
 import json
+import re
 from datetime import date, timedelta
 from typing import Literal, Optional
 from uuid import uuid4
@@ -21,7 +22,7 @@ from langgraph.config import get_stream_writer
 from langgraph.types import interrupt
 from pydantic import BaseModel, Field
 
-from . import db
+from . import db, rag
 
 Category = Literal["mobiles", "electronics", "travel", "spa_salon", "fashion", "beauty"]
 Plan = Literal["split_in_4", "pay_in_6", "pay_in_12"]
@@ -284,12 +285,33 @@ def check_eligibility(product_id: Optional[str] = None, amount: Optional[float] 
     return json.dumps({"eligible": ok, "amount": amount, "checks": checks})
 
 
-@tool
-def search_help_center(query: str) -> str:
-    """Search Tabby's help-center articles (payments, cards, plans, limits, refunds, rewards, support). Query in English keywords. Use before answering any policy or how-to question."""
-    articles = db.search_help(query)
-    emit({"type": "help", "articles": articles})
-    return json.dumps(articles) if articles else "No article found."
+class HelpSearchArgs(BaseModel):
+    queries: list[str] = Field(..., min_length=1, max_length=3, description=(
+        "1-3 search queries: the user's question as they asked it, plus the same question translated into the "
+        "other language (Arabic <-> English), plus optionally one rephrasing with Tabby terms "
+        "(e.g. 'pay in 4', 'late fee', 'refund', 'Tabby Card')."))
+    audience: Literal["consumer", "business"] = Field("consumer", description="'business' only for merchant questions.")
+
+
+@tool(args_schema=HelpSearchArgs)
+def search_help_center(queries: list[str], audience: str = "consumer") -> str:
+    """Search Tabby's official help center and FAQ (payments, plans, cards, late payments, refunds, limits, account, security, Tabby Card, rewards, merchants). Use before answering any policy or how-to question, and answer only from what it returns."""
+    docs = rag.retriever(audience).retrieve(queries)
+    if not docs:
+        emit({"type": "help", "articles": []})
+        return "No relevant help-center article found."
+    sources, seen = [], set()
+    for d in docs:
+        article = re.sub(r"/(en|ar)-SA/", "/", d.metadata["url"])  # same article in either language
+        if article not in seen:
+            seen.add(article)
+            snippet = d.page_content.split("\n\n", 1)[-1]
+            sources.append({"id": d.id, "title": d.metadata["title"], "url": d.metadata["url"],
+                            "body": snippet[:280] + ("…" if len(snippet) > 280 else "")})
+    emit({"type": "help", "articles": sources})
+    return json.dumps([{"ref": n + 1, "title": d.metadata["title"], "url": d.metadata["url"],
+                        "language": d.metadata.get("language"), "content": d.page_content}
+                       for n, d in enumerate(docs)], ensure_ascii=False)
 
 
 @tool

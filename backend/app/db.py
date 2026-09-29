@@ -139,11 +139,6 @@ def list_payment_attempts(limit: int = 5) -> list[dict]:
 
 # ---------------------------------------------------------------- support
 
-def search_help(query: str, limit: int = 3) -> list[dict]:
-    rows = sb().rpc("search_help", {"p_query": query, "p_limit": limit}).execute().data
-    return [{k: r[k] for k in ("id", "topic", "title", "body")} for r in rows]
-
-
 def create_ticket(ticket: dict) -> None:
     sb().table("support_tickets").insert({**ticket, "account_id": account_id()}).execute()
 
