@@ -86,7 +86,7 @@ primary = ChatAnthropic(
 
 # Open-weights backup, run locally: keeps the assistant up if the Anthropic API is
 # unreachable, rate-limited or erroring. Same tools and prompt.
-fallback = ChatOllama(
+fallback = FALLBACK_MODEL and ChatOllama(
     model=FALLBACK_MODEL,
     base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
     reasoning=False,
@@ -115,6 +115,8 @@ def agent(state: State):
             raise RuntimeError("simulated outage")
         return {"messages": [primary.invoke(messages)]}
     except Exception as e:  # any provider failure: timeout, 5xx, 429, auth, network
+        if not FALLBACK_MODEL:
+            raise
         log.warning("primary model failed (%s); falling back to %s", e, FALLBACK_MODEL)
         try:
             get_stream_writer()({"type": "model_fallback", "model": FALLBACK_MODEL})

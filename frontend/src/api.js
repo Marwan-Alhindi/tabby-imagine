@@ -1,11 +1,27 @@
+// A random id per browser: the backend gives each visitor a private copy of the demo account.
+const VISITOR_KEY = "tabby-visitor-id";
+const visitorId = (() => {
+  try {
+    let id = localStorage.getItem(VISITOR_KEY);
+    if (!id) localStorage.setItem(VISITOR_KEY, (id = crypto.randomUUID()));
+    return id;
+  } catch {
+    return crypto.randomUUID();
+  }
+})();
+const HEADERS = { "Content-Type": "application/json", "X-Visitor-Id": visitorId };
+
 // POST + read an SSE stream from the backend, calling onEvent(event, data) per message.
 async function stream(path, body, onEvent) {
   const res = await fetch(path, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: HEADERS,
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    const detail = await res.json().then((j) => j.detail).catch(() => null);
+    throw new Error(detail || `HTTP ${res.status}`);
+  }
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buf = "";
@@ -33,7 +49,7 @@ export const sendMessage = (thread_id, message, language, screen, onEvent) =>
 export const resumeAction = (thread_id, interrupt_id, approved, onEvent) =>
   stream("/api/chat/resume", { thread_id, interrupt_id, approved }, onEvent);
 
-export const getJSON = (path) => fetch(path).then((r) => r.json());
+export const getJSON = (path) => fetch(path, { headers: HEADERS }).then((r) => r.json());
 
 export const postJSON = (path, body) =>
-  fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json());
+  fetch(path, { method: "POST", headers: HEADERS, body: JSON.stringify(body) }).then((r) => r.json());

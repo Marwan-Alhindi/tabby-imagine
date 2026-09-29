@@ -2,7 +2,7 @@
 
 An AI assistant tab in the Tabby app that can search every part of the app and act in it, in Arabic or English.
 
-## Run
+## Run locally
 ```
 cd backend && uv run uvicorn app.main:app --port 8000
 cd frontend && npx vite            # http://localhost:5173
@@ -26,3 +26,6 @@ Opens https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:2024 (uses `L
 - The assistant asks for Arabic or English on first open; saved in `accounts.language`, switchable from the chat header. Replies, UI text and RTL follow it.
 - Tabby's record: every conversation is checkpointed in Supabase Postgres (LangGraph `AsyncPostgresSaver`) and traced in LangSmith.
 - The user's view: no transcript. Returning within 7 days shows a "Welcome back" card built from a structured memo (`chat_sessions.memo`: plans viewed, last search, checkout status, tickets). Continue resumes the thread with full context, including a purchase left waiting for confirmation.
+
+## Deploy (Render)
+One Docker image (`Dockerfile`) builds the React app and serves it with the API. `render.yaml` defines the service; set the secret env vars in Render. Each browser gets its own copy of the seeded demo account, and chat is rate-limited per visitor. Reset demo data with `cd backend && uv run python -m db.seed`.

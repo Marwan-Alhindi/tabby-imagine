@@ -16,6 +16,9 @@ that memo, not the transcript, is what the user sees when they come back.
 import asyncio
 import json
 import os
+import time
+from collections import defaultdict, deque
+from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import Literal, Optional
 
@@ -23,7 +26,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from fastapi import FastAPI, Query  # noqa: E402
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request  # noqa: E402
+from fastapi.staticfiles import StaticFiles  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from langchain_core.messages import AIMessageChunk, HumanMessage  # noqa: E402
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver  # noqa: E402
@@ -38,6 +42,7 @@ from .memory import build_memo  # noqa: E402
 from .tools import payments_summary, _card  # noqa: E402
 
 SESSION_TTL_DAYS = 7  # how long the user is offered to pick up where they left off
+FRONTEND_DIST = Path(os.getenv("FRONTEND_DIST", Path(__file__).resolve().parents[2] / "frontend" / "dist"))
 
 Language = Literal["ar", "en"]
 
@@ -56,6 +61,29 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Tabby Assistant", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+
+async def visitor(x_visitor_id: Optional[str] = Header(None)) -> str:
+    """Scope the request to the visitor's own demo account (created on first visit)."""
+    aid = db.visitor_account(x_visitor_id)
+    db.use_account(aid)
+    await asyncio.to_thread(db.ensure_account, aid)
+    return aid
+
+
+# Public demo: cap chat turns so one visitor can't run up the model bill.
+LIMITS = {"visitor": (30, 3600), "ip": (80, 3600)}  # max turns per window (seconds)
+_hits: dict[str, deque] = defaultdict(deque)
+
+
+def rate_limit(key: str, kind: str) -> None:
+    limit, window = LIMITS[kind]
+    q, now = _hits[f"{kind}:{key}"], time.monotonic()
+    while q and now - q[0] > window:
+        q.popleft()
+    if len(q) >= limit:
+        raise HTTPException(429, "You've reached the demo's message limit for now. Please try again in a while.")
+    q.append(now)
 
 
 class ChatRequest(BaseModel):
@@ -95,7 +123,8 @@ async def _save_memo(graph, thread_id: str) -> None:
     await asyncio.to_thread(db.upsert_session, thread_id, state.values.get("language") or "en", memo)
 
 
-async def _run(graph, graph_input, thread_id: str):
+async def _run(graph, graph_input, thread_id: str, aid: str):
+    db.use_account(aid)  # the stream runs in its own task; re-scope it to the visitor
     try:
         async for mode, chunk in graph.astream(graph_input, _config(thread_id), stream_mode=["messages", "updates", "custom"]):
             if mode == "messages":
@@ -120,7 +149,9 @@ async def _run(graph, graph_input, thread_id: str):
 
 
 @app.post("/api/chat")
-async def chat(req: ChatRequest):
+async def chat(req: ChatRequest, request: Request, aid: str = Depends(visitor)):
+    rate_limit(aid, "visitor")
+    rate_limit(request.headers.get("x-forwarded-for", request.client.host).split(",")[0], "ip")
     graph = app.state.graph
     pending = (await graph.aget_state(_config(req.thread_id))).interrupts
     if pending:
@@ -130,17 +161,17 @@ async def chat(req: ChatRequest):
     else:
         text = req.message if not req.screen else f"[user opened chat from the {req.screen} tab]\n{req.message}"
         graph_input = {"messages": [HumanMessage(text)], "language": req.language}
-    return EventSourceResponse(_run(graph, graph_input, req.thread_id))
+    return EventSourceResponse(_run(graph, graph_input, req.thread_id, aid))
 
 
 @app.post("/api/chat/resume")
-async def resume(req: ResumeRequest):
+async def resume(req: ResumeRequest, aid: str = Depends(visitor)):
     cmd = Command(resume={req.interrupt_id: {"approved": req.approved}})
-    return EventSourceResponse(_run(app.state.graph, cmd, req.thread_id))
+    return EventSourceResponse(_run(app.state.graph, cmd, req.thread_id, aid))
 
 
 @app.get("/api/session")
-async def session():
+async def session(aid: str = Depends(visitor)):
     """What the assistant tab needs on open: the saved language and, if recent, the last session's memo."""
     account = await asyncio.to_thread(db.get_account)
     s = await asyncio.to_thread(db.latest_session, SESSION_TTL_DAYS)
@@ -153,7 +184,7 @@ async def session():
 
 
 @app.get("/api/sessions")
-async def sessions():
+async def sessions(aid: str = Depends(visitor)):
     """Recent sessions for the history sheet: memos only, never transcripts."""
     rows = await asyncio.to_thread(db.list_sessions, SESSION_TTL_DAYS)
     for s in rows:
@@ -162,7 +193,7 @@ async def sessions():
 
 
 @app.post("/api/language")
-def set_language(req: LanguageRequest):
+def set_language(req: LanguageRequest, aid: str = Depends(visitor)):
     db.update_account({"language": req.language})
     return {"language": req.language}
 
@@ -186,15 +217,20 @@ def products(
 
 
 @app.get("/api/payments")
-def payments():
+def payments(aid: str = Depends(visitor)):
     return payments_summary()
 
 
 @app.get("/api/account")
-def account():
+def account(aid: str = Depends(visitor)):
     return db.get_account()
 
 
 @app.get("/api/health")
 def health():
     return {"ok": True}
+
+
+# The built React app, served from the same origin as the API (one link to share).
+if FRONTEND_DIST.is_dir():
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
