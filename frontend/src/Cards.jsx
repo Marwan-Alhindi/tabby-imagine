@@ -32,12 +32,6 @@ function Products({ ui, onAsk }) {
   if (!ui.items.length) return <div className="card muted">{t("No matching products.")}</div>;
   return (
     <div>
-      <div className="card-caption">
-        {ui.total} {t("results")}
-        {Object.entries(ui.filters || {}).filter(([, v]) => v != null).map(([k, v]) => (
-          <span key={k} className="filter-tag">{k.replace(/_/g, " ")}: {Array.isArray(v) ? v.join(", ") : String(v)}</span>
-        ))}
-      </div>
       <div className="h-scroll">{ui.items.map((p) => <ProductCard key={p.id} p={p} onAsk={onAsk} />)}</div>
     </div>
   );
