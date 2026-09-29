@@ -182,6 +182,8 @@ export default function Chat({ language, onLanguage, screen, onNavigate }) {
       } else if (event === "tool") {
         if (tail?.kind === "text") last.parts.pop(); // narration before a tool call adds nothing
         last.parts.push({ kind: "tool", name: data.name });
+      } else if (event === "ui" && data.type === "model_fallback") {
+        if (!last.parts.some((p) => p.ui?.type === "model_fallback")) last.parts.push({ kind: "ui", ui: data });
       } else if (event === "ui") {
         last.parts.push({ kind: "ui", ui: data });
         if (data.type === "navigate") onNavigate(data);

@@ -263,6 +263,7 @@ export function UICard({ ui, onAsk }) {
     case "stores": return <Stores ui={ui} />;
     case "referral": return <Referral ui={ui} />;
     case "receipt": return <Receipt ui={ui} />;
+    case "model_fallback": return <div className="tool-chip fallback">⚡ {t("Backup model answering")} · {ui.model}</div>;
     case "navigate": return <div className="tool-chip">↗ {t("Opened")} {t(ui.screen[0].toUpperCase() + ui.screen.slice(1))}{ui.category ? ` · ${ui.category}` : ""}</div>;
     default: return null;
   }

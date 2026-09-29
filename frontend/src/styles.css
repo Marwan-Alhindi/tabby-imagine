@@ -169,3 +169,4 @@ summary { cursor: pointer; color: var(--mint-ink); font-weight: 600; padding: 4p
 .session-item .row { font-size: 13px; }
 .resumed { border: 1px dashed var(--mint-ink); }
 .chat-header .lang-toggle { display: grid; place-items: center; color: var(--ink); }
+.tool-chip.fallback { background: #fff4e0; color: #8a5300; }

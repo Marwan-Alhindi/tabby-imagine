@@ -100,5 +100,6 @@ const AR = {
   "Summaries of your last 7 days. Conversations themselves aren't shown.": "ملخصات آخر 7 أيام، بدون نص المحادثات.",
   "cat:mobiles": "جوالات", "cat:electronics": "إلكترونيات", "cat:travel": "سفر", "cat:spa_salon": "سبا وصالون",
   "cat:fashion": "أزياء", "cat:beauty": "تجميل",
+  "Backup model answering": "يرد النموذج الاحتياطي",
   Home: "الرئيسية", Shop: "تسوق", Payments: "المدفوعات", Profile: "حسابي",
 };

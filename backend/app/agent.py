@@ -8,13 +8,16 @@ State is checkpointed per thread in Postgres, so a paused conversation resumes
 exactly where it stopped, even days later.
 """
 
+import logging
 import os
 from datetime import date
 from functools import lru_cache
 from typing import Literal, get_args
 
 from langchain_anthropic import ChatAnthropic
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import AIMessage, SystemMessage
+from langchain_ollama import ChatOllama
+from langgraph.config import get_stream_writer
 from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 
@@ -68,17 +71,56 @@ Today is {today:%A %d %B %Y}. The user's name is {db.get_account()["name"]}."""
 MODEL = os.getenv("TABBY_MODEL", "claude-opus-5-5")
 EFFORT = os.getenv("TABBY_EFFORT", "low")  # chat: keep it snappy
 
-llm = ChatAnthropic(
+FALLBACK_MODEL = os.getenv("TABBY_FALLBACK_MODEL", "qwen3:8b")   # open model served by Ollama
+SIMULATE_OUTAGE = os.getenv("TABBY_SIMULATE_OUTAGE") == "1"      # demo: force the fallback path
+
+log = logging.getLogger("tabby.agent")
+
+primary = ChatAnthropic(
     model=MODEL,
     max_tokens=4096,
     output_config={"effort": EFFORT},
+    default_request_timeout=30,
+    max_retries=1,
 ).bind_tools(ALL_TOOLS)
+
+# Open-weights backup, run locally: keeps the assistant up if the Anthropic API is
+# unreachable, rate-limited or erroring. Same tools and prompt.
+fallback = ChatOllama(
+    model=FALLBACK_MODEL,
+    base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+    reasoning=False,
+    num_ctx=16384,
+    temperature=0,
+).bind_tools(ALL_TOOLS)
+
+
+def _plain(messages: list) -> list:
+    """Strip provider-specific blocks (e.g. Claude thinking) so the open model gets text + tool calls."""
+    out = []
+    for m in messages:
+        if isinstance(m, AIMessage) and isinstance(m.content, list):
+            text = "".join(b.get("text", "") for b in m.content if isinstance(b, dict) and b.get("type") == "text")
+            m = AIMessage(content=text, tool_calls=m.tool_calls, id=m.id)
+        out.append(m)
+    return out
 
 
 def agent(state: State):
     # System prompt is prepended per call (not stored), so history stays append-only.
     prompt = system_prompt(date.today(), state.get("language") or "en")
-    return {"messages": [llm.invoke([SystemMessage(prompt), *state["messages"]])]}
+    messages = [SystemMessage(prompt), *state["messages"]]
+    try:
+        if SIMULATE_OUTAGE:
+            raise RuntimeError("simulated outage")
+        return {"messages": [primary.invoke(messages)]}
+    except Exception as e:  # any provider failure: timeout, 5xx, 429, auth, network
+        log.warning("primary model failed (%s); falling back to %s", e, FALLBACK_MODEL)
+        try:
+            get_stream_writer()({"type": "model_fallback", "model": FALLBACK_MODEL})
+        except RuntimeError:
+            pass
+        return {"messages": [fallback.invoke(_plain(messages))]}
 
 
 def build_graph(checkpointer=None):
