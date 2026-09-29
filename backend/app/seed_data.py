@@ -87,7 +87,7 @@ ACCOUNT = {
     "profile_completion_pct": 40,
     "cashback_balance": 37.5,
     "referral": {"code": "MRWAN200", "reward_per_friend": 50, "max_reward": 200, "earned": 0},
-    "credit_limit": 8000,
+    "credit_limit": 50000,
 }
 
 # Orders the user already paid with Tabby. Installments are mutated by actions.
