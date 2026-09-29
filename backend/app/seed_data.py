@@ -1,7 +1,7 @@
-"""Mock Tabby data: catalog, stores, and the signed-in user's account.
+"""Demo data loaded into Supabase by `db/seed.py`.
 
-Everything lives in memory so the demo is self-contained. In production these
-would be calls to Tabby's catalog, payments, and account services.
+Stands in for Tabby's catalog, payments, and account services. Installment
+due dates are relative to the day you seed.
 """
 
 from datetime import date, timedelta
@@ -75,17 +75,10 @@ PRODUCTS = [
     _p("b1", "Dior Sauvage EDP 100ml", "Dior", "beauty", 595, "noon", 4.8, {}),
 ]
 
-PRODUCTS_BY_ID = {p["id"]: p for p in PRODUCTS}
-STORES_BY_ID = {s["id"]: s for s in STORES}
-
-# Tabby payment rules shown in the app.
-SPLIT_IN_4_MAX = 5000          # pay in 4, interest-free
-LONG_PLAN_MIN, LONG_PLAN_MAX = 500, 50000
-LONG_PLAN_MONTHS = [6, 12]
-LONG_PLAN_FEE_PCT = {6: 0.0, 12: 8.0}  # illustrative
 
 
-_today = date(2026, 9, 29)
+
+_today = date.today()
 
 ACCOUNT = {
     "name": "Mrwan",
@@ -115,5 +108,3 @@ ORDERS = [
 ]
 
 
-def today() -> date:
-    return _today

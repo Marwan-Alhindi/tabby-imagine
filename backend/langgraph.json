@@ -1,0 +1,5 @@
+{
+  "dependencies": ["."],
+  "graphs": { "tabby_assistant": "./studio.py:studio_graph" },
+  "env": ".env"
+}

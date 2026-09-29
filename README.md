@@ -15,3 +15,9 @@ cd frontend && npx vite            # http://localhost:5173
 - Action tools pause the graph with `interrupt()`; only the user's tap on Confirm (a separate `/api/chat/resume` call) resumes them. The model can't approve its own actions.
 - Tools stream structured UI events (cards) separately from the text they return to the model.
 - `backend/app/data.py`: mock catalog/account standing in for Tabby services.
+
+## Visualize the graph (LangGraph Studio)
+```
+cd backend && uv run langgraph dev
+```
+Opens https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:2024 (uses `LANGSMITH_API_KEY`).

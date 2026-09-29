@@ -23,9 +23,9 @@ from langgraph.types import Command  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 from sse_starlette.sse import EventSourceResponse  # noqa: E402
 
-from . import data  # noqa: E402
+from . import db  # noqa: E402
 from .agent import graph  # noqa: E402
-from .tools import filter_products, payments_summary, _card  # noqa: E402
+from .tools import payments_summary, _card  # noqa: E402
 
 app = FastAPI(title="Tabby Assistant")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -100,10 +100,11 @@ def products(
     color: Optional[str] = None,
     store: Optional[str] = None,
     deals_only: bool = False,
-    sort_by: str = "relevance",
+    sort: str = "relevance",
 ):
-    items = filter_products(query, category, brands, min_price, max_price, min_storage_gb, color, store, deals_only, sort_by)
-    return [_card(p) for p in items]
+    res = db.search_products(query=query, category=category, brands=brands, min_price=min_price, max_price=max_price,
+                             min_storage_gb=min_storage_gb, color=color, store=store, deals_only=deals_only, sort=sort)
+    return [_card(p) for p in res["items"]]
 
 
 @app.get("/api/payments")
@@ -113,7 +114,7 @@ def payments():
 
 @app.get("/api/account")
 def account():
-    return data.ACCOUNT
+    return db.get_account()
 
 
 @app.get("/api/health")
