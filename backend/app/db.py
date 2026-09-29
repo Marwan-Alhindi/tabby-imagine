@@ -72,3 +72,31 @@ def get_installment(installment_id: str) -> Optional[dict]:
 
 def mark_installment_paid(installment_id: str) -> None:
     sb().table("installments").update({"status": "paid", "paid_at": datetime.now(timezone.utc).isoformat()}).eq("id", installment_id).execute()
+
+
+# ---------------------------------------------------------------- payment methods & attempts
+
+def list_payment_methods() -> list[dict]:
+    return (sb().table("payment_methods").select("*").eq("account_id", ACCOUNT_ID)
+            .order("is_default", desc=True).execute().data)
+
+
+def set_default_payment_method(method_id: str) -> None:
+    sb().table("payment_methods").update({"is_default": False}).eq("account_id", ACCOUNT_ID).execute()
+    sb().table("payment_methods").update({"is_default": True}).eq("id", method_id).eq("account_id", ACCOUNT_ID).execute()
+
+
+def list_payment_attempts(limit: int = 5) -> list[dict]:
+    return (sb().table("payment_attempts").select("*, installments(orders(product))").eq("account_id", ACCOUNT_ID)
+            .order("created_at", desc=True).limit(limit).execute().data)
+
+
+# ---------------------------------------------------------------- support
+
+def search_help(query: str, limit: int = 3) -> list[dict]:
+    rows = sb().rpc("search_help", {"p_query": query, "p_limit": limit}).execute().data
+    return [{k: r[k] for k in ("id", "topic", "title", "body")} for r in rows]
+
+
+def create_ticket(ticket: dict) -> None:
+    sb().table("support_tickets").insert({**ticket, "account_id": ACCOUNT_ID}).execute()

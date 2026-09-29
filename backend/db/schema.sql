@@ -2,7 +2,8 @@
 
 drop view if exists product_cards;
 drop function if exists search_products;
-drop table if exists installments, orders, products, stores, categories, accounts cascade;
+drop function if exists search_help;
+drop table if exists support_tickets, help_articles, payment_attempts, payment_methods, installments, orders, products, stores, categories, accounts cascade;
 
 create table categories (
   id   text primary key,
@@ -39,6 +40,7 @@ create table accounts (
   profile_completion_pct int not null default 0,
   cashback_balance       numeric not null default 0,
   credit_limit           numeric not null,
+  id_verified            boolean not null default true,
   referral               jsonb not null
 );
 
@@ -61,6 +63,59 @@ create table installments (
   status   text not null check (status in ('paid', 'upcoming')),
   paid_at  timestamptz
 );
+
+create table payment_methods (
+  id         text primary key,
+  account_id text not null references accounts(id),
+  brand      text not null check (brand in ('visa', 'mastercard', 'mada', 'apple_pay')),
+  last4      text not null,
+  exp_month  int not null,
+  exp_year   int not null,
+  is_default boolean not null default false
+);
+
+-- Every charge Tabby tried, with the processor's reason when it failed.
+create table payment_attempts (
+  id             text primary key,
+  account_id     text not null references accounts(id),
+  method_id      text not null references payment_methods(id),
+  installment_id text references installments(id),
+  amount         numeric not null,
+  status         text not null check (status in ('succeeded', 'failed')),
+  failure_code   text,
+  created_at     timestamptz not null default now()
+);
+
+-- Help-center articles the assistant searches before answering policy questions.
+create table help_articles (
+  id     text primary key,
+  topic  text not null,
+  title  text not null,
+  body   text not null,
+  search tsvector generated always as (to_tsvector('english', title || ' ' || topic || ' ' || body)) stored
+);
+create index on help_articles using gin (search);
+
+create table support_tickets (
+  id         text primary key,
+  account_id text not null references accounts(id),
+  category   text not null,
+  summary    text not null,
+  status     text not null default 'open',
+  created_at timestamptz not null default now()
+);
+
+-- Full-text search over the help center: any query word may match, best match first.
+create function search_help(p_query text, p_limit int default 3) returns setof help_articles
+language sql stable as $$
+  with q as (
+    select to_tsquery('english', array_to_string(tsvector_to_array(to_tsvector('english', p_query)), ' | ')) as tq
+  )
+  select h.* from help_articles h, q
+  where h.search @@ q.tq
+  order by ts_rank(h.search, q.tq) desc
+  limit p_limit;
+$$;
 
 -- Products joined with their store: what the app and the assistant display.
 create view product_cards with (security_invoker = true) as
@@ -122,5 +177,9 @@ alter table products     enable row level security;
 alter table accounts     enable row level security;
 alter table orders       enable row level security;
 alter table installments enable row level security;
+alter table payment_methods  enable row level security;
+alter table payment_attempts enable row level security;
+alter table help_articles    enable row level security;
+alter table support_tickets  enable row level security;
 
 notify pgrst, 'reload schema';

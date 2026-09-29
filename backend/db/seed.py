@@ -28,7 +28,8 @@ def main():
             [{**p, "specs": Jsonb(p["specs"])} for p in d.PRODUCTS])
         a = d.ACCOUNT
         cur.execute(
-            "insert into accounts values (%s, %s, %s, %s, %s, %s, %s, %s)",
+            """insert into accounts (id, name, phone, home_address, profile_completion_pct, cashback_balance, credit_limit, referral)
+               values (%s, %s, %s, %s, %s, %s, %s, %s)""",
             (ACCOUNT_ID, a["name"], a["phone"], None, a["profile_completion_pct"],
              a["cashback_balance"], a["credit_limit"], Jsonb(a["referral"])))
         for o in d.ORDERS:
@@ -37,7 +38,16 @@ def main():
             cur.executemany(
                 "insert into installments (id, order_id, seq, amount, due, status) values (%s, %s, %s, %s, %s, %s)",
                 [(i["id"], o["id"], n + 1, i["amount"], i["due"], i["status"]) for n, i in enumerate(o["installments"])])
-    print(f"Seeded {len(d.PRODUCTS)} products, {len(d.STORES)} stores, {len(d.ORDERS)} orders.")
+        cur.executemany(
+            "insert into payment_methods values (%(id)s, %(account_id)s, %(brand)s, %(last4)s, %(exp_month)s, %(exp_year)s, %(is_default)s)",
+            [{**m, "account_id": ACCOUNT_ID} for m in d.PAYMENT_METHODS])
+        cur.executemany(
+            """insert into payment_attempts (id, account_id, method_id, installment_id, amount, status, failure_code, created_at)
+               values (%(id)s, %(account_id)s, %(method_id)s, %(installment_id)s, %(amount)s, %(status)s, %(failure_code)s,
+                       now() - make_interval(days => %(days_ago)s))""",
+            [{**a, "account_id": ACCOUNT_ID} for a in d.PAYMENT_ATTEMPTS])
+        cur.executemany("insert into help_articles (id, topic, title, body) values (%s, %s, %s, %s)", d.HELP_ARTICLES)
+    print(f"Seeded {len(d.PRODUCTS)} products, {len(d.STORES)} stores, {len(d.ORDERS)} orders, {len(d.HELP_ARTICLES)} help articles.")
 
 
 if __name__ == "__main__":

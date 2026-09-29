@@ -18,7 +18,7 @@ export function ProductCard({ p, onAsk }) {
       </div>
       {p.monthly_from && <div className="product-monthly">from {sar(p.monthly_from)}/mo with tabby</div>}
       {onAsk && (
-        <button className="chip-btn" onClick={() => onAsk(`I want the ${p.name} (id ${p.id}). What are my plan options?`)}>
+        <button className="chip-btn" onClick={() => onAsk(`Show me the payment plans for the ${p.name} (id ${p.id}).`)}>
           Plans
         </button>
       )}
@@ -61,20 +61,127 @@ function Comparison({ ui }) {
   );
 }
 
-function Plans({ ui }) {
+function Plans({ ui, onAsk }) {
   return (
     <div className="card">
       <div className="card-title">{ui.product || "Plans"} · {sar(ui.price)}</div>
       {ui.options.length === 0 && <div className="muted">No tabby plan for this amount.</div>}
       {ui.options.map((o) => (
-        <div key={o.plan} className="row">
-          <div>
-            <div className="row-main">{o.label}</div>
-            <div className="muted">{o.fee_pct ? `${o.fee_pct}% fee` : "No interest, no fees"}</div>
+        <div key={o.plan} className="plan">
+          <div className="plan-head">
+            <div>
+              <div className="row-main">{o.label}</div>
+              <div className="muted">{o.fee_pct ? `${o.fee_pct}% fee (${sar(o.fee_amount)})` : "No interest, no fees"}</div>
+            </div>
+            <div className="plan-amount">
+              <b>{sar(o.per_installment)}</b>
+              <span className="muted">× {o.installments}</span>
+            </div>
           </div>
-          <div className="row-amount">{o.installments} × {sar(o.per_installment)}</div>
+          <div className="plan-facts">
+            <span>Today <b>{sar(o.per_installment)}</b></span>
+            <span>Total <b>{sar(o.total)}</b></span>
+            <span>Last payment <b>{o.schedule[o.schedule.length - 1].due}</b></span>
+          </div>
+          <details>
+            <summary>Payment schedule</summary>
+            {o.schedule.map((s) => (
+              <div key={s.n} className="sched-row"><span>{s.n === 1 ? "Today" : s.due}</span><span>{sar(s.amount)}</span></div>
+            ))}
+          </details>
+          {ui.product_id && onAsk && (
+            <button className="btn-primary plan-pay"
+                    onClick={() => onAsk(`Buy the ${ui.product} (id ${ui.product_id}) with the "${o.label}" plan (${o.plan}).`)}>
+              Pay {sar(o.per_installment)} today
+            </button>
+          )}
         </div>
       ))}
+    </div>
+  );
+}
+
+function OrderStatus({ ui }) {
+  const pct = Math.round((ui.installments_paid / ui.installments_total) * 100);
+  return (
+    <div className="card">
+      <div className="card-title">{ui.product}</div>
+      <div className="muted">{ui.store} · {ui.plan.replace(/_/g, " ")}</div>
+      <div className="progress"><i style={{ width: `${pct}%` }} /></div>
+      <div className="row"><span>Paid</span><b>{ui.installments_paid} of {ui.installments_total} · {sar(ui.amount_paid)}</b></div>
+      <div className="row"><span>Left</span><b>{ui.installments_left} · {sar(ui.amount_left)}</b></div>
+      {ui.next_due && <div className="row"><span>Next / final</span><b>{ui.next_due} → {ui.final_due}</b></div>}
+      {ui.overdue.length > 0 && <div className="warn">{ui.overdue.length} payment overdue</div>}
+    </div>
+  );
+}
+
+function PaymentMethods({ ui }) {
+  return (
+    <div className="card">
+      <div className="card-title">Your cards</div>
+      {ui.methods.map((m) => (
+        <div key={m.id} className="row">
+          <div>
+            <div className="row-main">{m.label} {m.is_default && <span className="filter-tag">Default</span>}</div>
+            <div className="muted">Expires {m.expiry}</div>
+          </div>
+          <span className={m.status === "active" ? "ok" : "bad"}>{m.status}</span>
+        </div>
+      ))}
+      {ui.attempts.length > 0 && <div className="card-sub">Recent payments</div>}
+      {ui.attempts.map((a, i) => (
+        <div key={i} className="row">
+          <div>
+            <div className="row-main">{sar(a.amount)} {a.for ? `· ${a.for}` : ""}</div>
+            <div className="muted">{a.date} · {a.card}{a.reason ? ` · ${a.reason}` : ""}</div>
+          </div>
+          <span className={a.status === "succeeded" ? "ok" : "bad"}>{a.status}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Eligibility({ ui }) {
+  return (
+    <div className="card">
+      <div className="card-title">{ui.eligible ? "✓ You can buy this" : "✗ Can't buy this yet"}</div>
+      <div className="muted">{ui.product ? `${ui.product} · ` : ""}{sar(ui.amount)}</div>
+      {ui.checks.map((c) => (
+        <div key={c.check} className="row">
+          <div>
+            <div className="row-main">{c.check}</div>
+            <div className="muted">{c.detail}</div>
+          </div>
+          <span className={c.ok ? "ok" : "bad"}>{c.ok ? "✓" : "✗"}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Help({ ui }) {
+  if (!ui.articles.length) return null;
+  return (
+    <div className="card">
+      <div className="card-sub">From the help center</div>
+      {ui.articles.map((a) => (
+        <details key={a.id} className="article">
+          <summary>{a.title}</summary>
+          <p>{a.body}</p>
+        </details>
+      ))}
+    </div>
+  );
+}
+
+function Ticket({ ui }) {
+  return (
+    <div className="card receipt">
+      <div className="card-title">🎧 Ticket {ui.id} opened</div>
+      <div className="muted">{ui.summary}</div>
+      <div className="muted">A support agent will reply in the app, usually within 24 hours.</div>
     </div>
   );
 }
@@ -147,7 +254,12 @@ export function UICard({ ui, onAsk }) {
   switch (ui.type) {
     case "products": return <Products ui={ui} onAsk={onAsk} />;
     case "comparison": return <Comparison ui={ui} />;
-    case "plans": return <Plans ui={ui} />;
+    case "plans": return <Plans ui={ui} onAsk={onAsk} />;
+    case "order_status": return <OrderStatus ui={ui} />;
+    case "payment_methods": return <PaymentMethods ui={ui} />;
+    case "eligibility": return <Eligibility ui={ui} />;
+    case "help": return <Help ui={ui} />;
+    case "ticket": return <Ticket ui={ui} />;
     case "payments": return <Payments ui={ui} />;
     case "account": return <Account ui={ui} />;
     case "stores": return <Stores ui={ui} />;

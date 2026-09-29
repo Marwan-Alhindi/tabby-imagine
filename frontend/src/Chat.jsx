@@ -16,14 +16,20 @@ const TOOL_LABELS = {
   start_checkout: "Preparing checkout",
   pay_installment: "Preparing payment",
   update_home_address: "Preparing address",
+  get_order_status: "Checking your orders",
+  get_payment_methods: "Checking your cards",
+  check_eligibility: "Running checkout checks",
+  search_help_center: "Searching the help center",
+  set_default_card: "Preparing card change",
+  create_support_ticket: "Preparing support ticket",
 };
 
 const SUGGESTIONS = [
   "ابي ايفون او سامسونج ٢٥٦ جيجا وقسطه الشهري اقل من ١٠٠٠",
+  "ليش ما قدرت ادفع بالفيزا حقتي؟",
+  "How many months are left on my AirPods?",
   "Best deals on electronics right now",
-  "What do I owe this month?",
-  "Compare the iPhone 17 Pro and Galaxy S25 Ultra",
-  "Spa offers with the most cashback",
+  "Can I buy a MacBook Air right now?",
 ];
 
 const threadId = crypto.randomUUID();

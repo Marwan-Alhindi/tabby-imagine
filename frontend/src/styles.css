@@ -116,3 +116,22 @@ th { font-weight: 700; } td:first-child { color: var(--muted); text-transform: c
 .btn-primary { background: var(--ink); color: #fff; }
 .btn-secondary { background: var(--card); }
 .receipt { background: #dcfbef; }
+
+/* Plans, support */
+.plan { border-top: 1px solid var(--line); padding: 12px 0 4px; }
+.plan:first-of-type { border-top: 0; }
+.plan-head { display: flex; justify-content: space-between; gap: 10px; }
+.plan-amount { text-align: end; white-space: nowrap; display: flex; flex-direction: column; }
+.plan-facts { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--muted); margin: 8px 0 4px; }
+.plan-facts b { color: var(--ink); font-weight: 600; }
+.plan-pay { width: 100%; margin: 8px 0 6px; }
+details { font-size: 13px; margin-top: 4px; }
+summary { cursor: pointer; color: var(--mint-ink); font-weight: 600; padding: 4px 0; }
+.sched-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed var(--line); }
+.progress { height: 8px; background: var(--card); border-radius: 999px; overflow: hidden; margin: 10px 0 4px; }
+.progress i { display: block; height: 100%; background: var(--mint); }
+.card-sub { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 10px 0 2px; }
+.ok { color: var(--mint-ink); font-weight: 700; font-size: 13px; }
+.bad { color: #c2410c; font-weight: 700; font-size: 13px; }
+.warn { margin-top: 6px; color: #c2410c; font-weight: 600; font-size: 13px; }
+.article p { margin: 4px 0 8px; color: #333; line-height: 1.5; }
