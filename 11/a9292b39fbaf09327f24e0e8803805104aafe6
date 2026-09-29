@@ -1,0 +1,39 @@
+.gitignore
+  s_bd9004f1bdd92c::t_458afc46b28353 1-5
+README.md
+  s_bd9004f1bdd92c::t_51a12bc06c8da2 1-17
+backend/pyproject.toml
+  s_bd9004f1bdd92c::t_e6e8f34347d5a8 1-15
+backend/uv.lock
+  s_bd9004f1bdd92c::t_61507d142e2c5b 1-1441
+frontend/index.html
+  s_bd9004f1bdd92c::t_dfb2216a8b1a8d 1-14
+frontend/package-lock.json
+  s_bd9004f1bdd92c::t_e725a051638588 1-2910
+frontend/package.json
+  s_bd9004f1bdd92c::t_81b8b529899f26 1-20
+frontend/src/App.jsx
+  s_bd9004f1bdd92c::t_fc14e10dbf1278 1-93
+frontend/src/api.js
+  s_bd9004f1bdd92c::t_b49c481bed934b 1-36
+frontend/src/main.jsx
+  s_bd9004f1bdd92c::t_215f11bce1032b 1-6
+frontend/vite.config.js
+  s_bd9004f1bdd92c::t_261ffb7ed8d3dc 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "11a9292b39fbaf09327f24e0e8803805104aafe6",
+  "prompts": {},
+  "sessions": {
+    "s_bd9004f1bdd92c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1bad4d66-51a0-40c1-81a4-cb972aa94313",
+        "model": "unknown"
+      },
+      "human_author": "Marwan-Alhindi <mfhmarwin@gmail.com>"
+    }
+  }
+}
