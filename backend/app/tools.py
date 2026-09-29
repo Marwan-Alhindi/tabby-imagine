@@ -326,10 +326,18 @@ def share_referral() -> str:
 
 # ---------------------------------------------------------------- action tools
 
-def confirm(action: str, title: str, lines: list[tuple[str, str]], confirm_label: str) -> bool:
-    """Pause the graph until the user taps Confirm or Cancel in the app."""
-    answer = interrupt({"action": action, "title": title, "lines": lines, "confirm_label": confirm_label})
-    return bool(answer and answer.get("approved"))
+def declined(action: str, title: str, lines: list[tuple[str, str]], confirm_label: str) -> Optional[str]:
+    """Pause the graph until the user answers the confirm card.
+
+    Returns None if they confirmed, otherwise why not: they tapped Cancel, or
+    they typed a new message instead (which counts as cancelling).
+    """
+    answer = interrupt({"action": action, "title": title, "lines": lines, "confirm_label": confirm_label}) or {}
+    if answer.get("approved"):
+        return None
+    if answer.get("message"):
+        return f"The user did not confirm and wrote instead: {answer['message']!r}. Respond to that."
+    return "The user tapped Cancel."
 
 
 @tool
@@ -356,8 +364,8 @@ def start_checkout(product_id: str, plan: Plan) -> str:
     if opt["fee_amount"]:
         lines.append(("Fee", f"{opt['fee_amount']:,.2f} SAR"))
     lines += [("Total", f"{opt['total']:,.2f} SAR"), ("Card", default_card()["label"])]
-    if not confirm("checkout", f"Buy {p['name']}", lines, "Confirm purchase"):
-        return "User cancelled the purchase. Nothing was charged."
+    if why := declined("checkout", f"Buy {p['name']}", lines, "Confirm purchase"):
+        return f"{why} Nothing was charged."
 
     oid = f"ord_{uuid4().hex[:6]}"
     t = date.today()
@@ -382,12 +390,12 @@ def pay_installment(installment_id: str) -> str:
     card = default_card()
     if not card or card["status"] != "active":
         return "The default card can't be charged (missing or expired). Ask the user to set another default card first."
-    if not confirm("pay_installment", f"Pay {i['amount']:,.2f} SAR now", [
+    if why := declined("pay_installment", f"Pay {i['amount']:,.2f} SAR now", [
         ("For", f"{o['product']} ({o['store']})"),
         ("Originally due", i["due"]),
         ("Card", card["label"]),
     ], "Pay now"):
-        return "User cancelled. Nothing was paid."
+        return f"{why} Nothing was paid."
     db.mark_installment_paid(installment_id)
     emit({"type": "receipt", "title": "Payment successful", "order": o})
     return json.dumps({"status": "paid", "remaining_outstanding": payments_summary()["total_outstanding"]})
@@ -397,10 +405,10 @@ def pay_installment(installment_id: str) -> str:
 def update_home_address(city: str, district: str, street: str, building_number: Optional[str] = None) -> str:
     """Save the user's home address to their profile. Requires confirmation in the app."""
     addr = {"city": city, "district": district, "street": street, "building_number": building_number}
-    if not confirm("update_address", "Save home address", [
+    if why := declined("update_address", "Save home address", [
         ("City", city), ("District", district), ("Street", street), ("Building", building_number or "-"),
     ], "Save"):
-        return "User cancelled. Address not saved."
+        return f"{why} Address not saved."
     db.update_account({"home_address": addr,
                        "profile_completion_pct": min(100, db.get_account()["profile_completion_pct"] + 30)})
     emit({"type": "receipt", "title": "Address saved", "address": addr})
@@ -415,10 +423,10 @@ def set_default_card(method_id: str) -> str:
         return f"Unknown card id {method_id}."
     if m["status"] == "expired":
         return f"{m['label']} expired {m['expiry']}; it can't be the default. Ask the user to add a new card in Profile."
-    if not confirm("set_default_card", f"Use {m['label']} as default", [
+    if why := declined("set_default_card", f"Use {m['label']} as default", [
         ("Card", m["label"]), ("Expires", m["expiry"]), ("Applies to", "All upcoming installments"),
     ], "Set as default"):
-        return "User cancelled. Default card unchanged."
+        return f"{why} Default card unchanged."
     db.set_default_payment_method(method_id)
     emit({"type": "receipt", "title": f"{m['label']} is now your default card"})
     return "Default card updated."
@@ -427,10 +435,10 @@ def set_default_card(method_id: str) -> str:
 @tool
 def create_support_ticket(category: Literal["payments", "cards", "orders", "refunds", "account", "other"], summary: str) -> str:
     """Hand the issue to a human agent when the help center and account checks can't resolve it. Requires confirmation in the app. summary: what the user tried and what went wrong."""
-    if not confirm("support_ticket", "Send to a support agent", [
+    if why := declined("support_ticket", "Send to a support agent", [
         ("Topic", category.title()), ("Issue", summary), ("Reply", "In the app, usually within 24 hours"),
     ], "Send"):
-        return "User cancelled. No ticket created."
+        return f"{why} No ticket created."
     tid = f"TKT-{uuid4().hex[:6].upper()}"
     db.create_ticket({"id": tid, "category": category, "summary": summary})
     emit({"type": "ticket", "id": tid, "category": category, "summary": summary})

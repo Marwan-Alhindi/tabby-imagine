@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getJSON } from "./api.js";
+import { setLanguage, t } from "./i18n.js";
 import { Payments, ProductCard } from "./Cards.jsx";
 import Chat from "./Chat.jsx";
 
@@ -34,7 +35,7 @@ function Shop({ nav }) {
   useEffect(() => { getJSON(`/api/products?${qs}`).then(setItems); }, [qs]);
   return (
     <div className="screen">
-      <h1>Shop</h1>
+      <h1>{t("Shop")}</h1>
       {qs && <div className="card-caption">Filtered by assistant: {decodeURIComponent(qs).replace(/&/g, " · ")}</div>}
       <div className="grid">{items.map((p) => <ProductCard key={p.id} p={p} />)}</div>
     </div>
@@ -46,7 +47,7 @@ function PaymentsScreen() {
   useEffect(() => { getJSON("/api/payments").then(setData); }, []);
   return (
     <div className="screen">
-      <h1>Payments</h1>
+      <h1>{t("Payments")}</h1>
       {data && <Payments ui={data} />}
     </div>
   );
@@ -54,6 +55,8 @@ function PaymentsScreen() {
 
 export default function App() {
   const [tab, setTab] = useState("assistant");
+  const [language, setLang] = useState("en");
+  setLanguage(language); // i18n reads it during this render
   const [fromTab, setFromTab] = useState("home"); // tab the user came from, sent as chat context
   const [shopNav, setShopNav] = useState(null);
 
@@ -68,14 +71,14 @@ export default function App() {
 
   return (
     <div className="stage">
-      <div className="phone">
+      <div className="phone" dir={language === "ar" ? "rtl" : "ltr"} lang={language}>
         <main className="content">
-          {tab === "home" && <Placeholder title="Home" note="Existing Tabby home screen." />}
+          {tab === "home" && <Placeholder title={t("Home")} note="Existing Tabby home screen." />}
           {tab === "shop" && <Shop nav={shopNav} />}
           {tab === "payments" && <PaymentsScreen />}
-          {tab === "profile" && <Placeholder title="Profile" note="Existing Tabby profile screen." />}
+          {tab === "profile" && <Placeholder title={t("Profile")} note="Existing Tabby profile screen." />}
           {/* Chat stays mounted so the conversation survives tab switches. */}
-          <div hidden={tab !== "assistant"} className="fill"><Chat screen={fromTab} onNavigate={navigate} /></div>
+          <div hidden={tab !== "assistant"} className="fill"><Chat language={language} onLanguage={setLang} screen={fromTab} onNavigate={navigate} /></div>
         </main>
 
         <nav className="tabbar">

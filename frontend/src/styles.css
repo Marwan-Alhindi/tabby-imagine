@@ -9,6 +9,9 @@
   --mint-ink: #0b5c3f;
   --radius: 22px;
   font-family: Inter, "IBM Plex Sans Arabic", system-ui, sans-serif;
+}
+[lang="ar"], [lang="ar"] * {
+  font-family: "IBM Plex Sans Arabic", Inter, system-ui, sans-serif;
   color: var(--ink);
 }
 * { box-sizing: border-box; }
@@ -135,3 +138,20 @@ summary { cursor: pointer; color: var(--mint-ink); font-weight: 600; padding: 4p
 .bad { color: #c2410c; font-weight: 700; font-size: 13px; }
 .warn { margin-top: 6px; color: #c2410c; font-weight: 600; font-size: 13px; }
 .article p { margin: 4px 0 8px; color: #333; line-height: 1.5; }
+
+/* Language picker, welcome back, header toggle */
+.grow { flex: 1; }
+.lang-toggle { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); font-weight: 700; }
+.lang-picker { height: 100%; display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 12px; padding: 0 28px 120px; text-align: center; }
+.lang-picker h2 { margin: 8px 0 0; font-size: 22px; font-weight: 800; }
+.lang-picker p { margin: 0 0 8px; }
+.lang-picker button { border: 1px solid var(--line); background: var(--surface); border-radius: 18px; padding: 16px; font-size: 18px; font-weight: 700; }
+.lang-picker button:hover { border-color: var(--ink); }
+.lang-picker button[lang="ar"] { font-family: "IBM Plex Sans Arabic", sans-serif; }
+.assistant-avatar.big { width: 64px; height: 64px; font-size: 30px; margin: 0 auto; }
+.small { font-size: 12px; }
+.welcome { border: 2px solid var(--mint); }
+.welcome .row b { text-align: end; }
+[dir="rtl"] .bubble.user { border-bottom-right-radius: 20px; border-bottom-left-radius: 6px; }
+[dir="rtl"] .bubble.assistant { border-bottom-left-radius: 20px; border-bottom-right-radius: 6px; }
+[dir="rtl"] .badge { left: auto; right: 8px; }

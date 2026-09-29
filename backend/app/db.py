@@ -1,7 +1,7 @@
 """Supabase data access. The only module that talks to the database."""
 
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from typing import Optional
 
@@ -100,3 +100,19 @@ def search_help(query: str, limit: int = 3) -> list[dict]:
 
 def create_ticket(ticket: dict) -> None:
     sb().table("support_tickets").insert({**ticket, "account_id": ACCOUNT_ID}).execute()
+
+
+# ---------------------------------------------------------------- chat sessions
+
+def latest_session(max_age_days: int) -> Optional[dict]:
+    since = (datetime.now(timezone.utc) - timedelta(days=max_age_days)).isoformat()
+    rows = (sb().table("chat_sessions").select("*").eq("account_id", ACCOUNT_ID).gte("updated_at", since)
+            .order("updated_at", desc=True).limit(1).execute().data)
+    return rows[0] if rows else None
+
+
+def upsert_session(thread_id: str, language: str, memo: dict) -> None:
+    sb().table("chat_sessions").upsert({
+        "thread_id": thread_id, "account_id": ACCOUNT_ID, "language": language, "memo": memo,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }).execute()

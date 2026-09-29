@@ -4,18 +4,17 @@
 
 `agent` is Claude with the tool list bound. `tools` runs them; action tools may
 pause the whole graph with `interrupt()` until the user confirms in the app.
-State is checkpointed per thread, so a paused conversation resumes exactly
-where it stopped.
+State is checkpointed per thread in Postgres, so a paused conversation resumes
+exactly where it stopped, even days later.
 """
 
 import os
 from datetime import date
 from functools import lru_cache
-from typing import get_args
+from typing import Literal, get_args
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import SystemMessage
-from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 
@@ -23,8 +22,18 @@ from . import db
 from .tools import ALL_TOOLS, LONG_PLAN_MAX, LONG_PLAN_MIN, SPLIT_IN_4_MAX, Category
 
 
+LANGUAGE_RULE = {
+    "ar": "Always reply in Arabic, in a natural Saudi tone, even if the user writes in English. Keep product names as they are.",
+    "en": "Always reply in English, even if the user writes in Arabic.",
+}
+
+
+class State(MessagesState):
+    language: Literal["ar", "en"]  # chosen by the user when they open the assistant
+
+
 @lru_cache
-def system_prompt(today: date) -> str:
+def system_prompt(today: date, language: str) -> str:
     return f"""You are Tabby Assistant, the in-app helper of Tabby, the Saudi buy-now-pay-later app.
 You live in a tab of the app and can search it and act in it on the user's behalf.
 
@@ -53,7 +62,7 @@ Rules
 - Purchases, payments and profile changes go through their action tool; the app then asks the user to confirm. Never claim an action happened unless the tool result says so. If the user cancels, acknowledge it briefly.
 - Call tools directly, without writing anything before them. Speak only once you have results.
 - If something is outside Tabby shopping and payments, say so in one line.
-- Reply in the user's language (Arabic in a natural Saudi tone, or English). Keep replies short: a few lines, no headings. Prices in SAR.
+- {LANGUAGE_RULE[language]} Keep replies short: a few lines, no headings. Prices in SAR.
 Today is {today:%A %d %B %Y}. The user's name is {db.get_account()["name"]}."""
 
 MODEL = os.getenv("TABBY_MODEL", "claude-opus-5-5")
@@ -66,13 +75,14 @@ llm = ChatAnthropic(
 ).bind_tools(ALL_TOOLS)
 
 
-def agent(state: MessagesState):
+def agent(state: State):
     # System prompt is prepended per call (not stored), so history stays append-only.
-    return {"messages": [llm.invoke([SystemMessage(system_prompt(date.today())), *state["messages"]])]}
+    prompt = system_prompt(date.today(), state.get("language") or "en")
+    return {"messages": [llm.invoke([SystemMessage(prompt), *state["messages"]])]}
 
 
 def build_graph(checkpointer=None):
-    g = StateGraph(MessagesState)
+    g = StateGraph(State)
     g.add_node("agent", agent)
     g.add_node("tools", ToolNode(ALL_TOOLS))
     g.add_edge(START, "agent")
@@ -81,5 +91,5 @@ def build_graph(checkpointer=None):
     return g.compile(checkpointer=checkpointer)
 
 
-graph = build_graph(InMemorySaver())  # used by the FastAPI server
-studio_graph = build_graph()          # LangGraph Studio supplies its own persistence
+# The FastAPI server builds its own graph with the Postgres checkpointer (see main.py).
+studio_graph = build_graph()  # LangGraph Studio supplies its own persistence

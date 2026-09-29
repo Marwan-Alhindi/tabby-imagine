@@ -27,10 +27,13 @@ async function stream(path, body, onEvent) {
   }
 }
 
-export const sendMessage = (thread_id, message, screen, onEvent) =>
-  stream("/api/chat", { thread_id, message, screen }, onEvent);
+export const sendMessage = (thread_id, message, language, screen, onEvent) =>
+  stream("/api/chat", { thread_id, message, language, screen }, onEvent);
 
 export const resumeAction = (thread_id, interrupt_id, approved, onEvent) =>
   stream("/api/chat/resume", { thread_id, interrupt_id, approved }, onEvent);
 
 export const getJSON = (path) => fetch(path).then((r) => r.json());
+
+export const postJSON = (path, body) =>
+  fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json());

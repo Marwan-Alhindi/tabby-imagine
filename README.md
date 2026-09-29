@@ -21,3 +21,8 @@ cd frontend && npx vite            # http://localhost:5173
 cd backend && uv run langgraph dev
 ```
 Opens https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:2024 (uses `LANGSMITH_API_KEY`).
+
+## Language and memory
+- The assistant asks for Arabic or English on first open; saved in `accounts.language`, switchable from the chat header. Replies, UI text and RTL follow it.
+- Tabby's record: every conversation is checkpointed in Supabase Postgres (LangGraph `AsyncPostgresSaver`) and traced in LangSmith.
+- The user's view: no transcript. Returning within 7 days shows a "Welcome back" card built from a structured memo (`chat_sessions.memo`: plans viewed, last search, checkout status, tickets). Continue resumes the thread with full context, including a purchase left waiting for confirmation.

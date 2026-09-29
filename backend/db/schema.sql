@@ -3,7 +3,7 @@
 drop view if exists product_cards;
 drop function if exists search_products;
 drop function if exists search_help;
-drop table if exists support_tickets, help_articles, payment_attempts, payment_methods, installments, orders, products, stores, categories, accounts cascade;
+drop table if exists chat_sessions, support_tickets, help_articles, payment_attempts, payment_methods, installments, orders, products, stores, categories, accounts cascade;
 
 create table categories (
   id   text primary key,
@@ -41,6 +41,7 @@ create table accounts (
   cashback_balance       numeric not null default 0,
   credit_limit           numeric not null,
   id_verified            boolean not null default true,
+  language               text check (language in ('ar', 'en')),  -- null until the user picks
   referral               jsonb not null
 );
 
@@ -104,6 +105,19 @@ create table support_tickets (
   status     text not null default 'open',
   created_at timestamptz not null default now()
 );
+
+-- One row per assistant conversation. The full message history lives in the
+-- LangGraph checkpoint tables (keyed by thread_id); this row holds only what
+-- the user sees when they come back: a small memo of what they were doing.
+create table chat_sessions (
+  thread_id  text primary key,
+  account_id text not null references accounts(id),
+  language   text not null check (language in ('ar', 'en')),
+  memo       jsonb not null default '{}',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index on chat_sessions (account_id, updated_at desc);
 
 -- Full-text search over the help center: any query word may match, best match first.
 create function search_help(p_query text, p_limit int default 3) returns setof help_articles
@@ -181,5 +195,6 @@ alter table payment_methods  enable row level security;
 alter table payment_attempts enable row level security;
 alter table help_articles    enable row level security;
 alter table support_tickets  enable row level security;
+alter table chat_sessions    enable row level security;
 
 notify pgrst, 'reload schema';
